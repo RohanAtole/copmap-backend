@@ -1,13 +1,13 @@
 # CopMap Backend — Police Operations Management System
 
-> Backend engineering screening task submission — Spring Boot microservice for real police field operations.
+> Real-time patrolling and bandobast management platform for high-stakes field operations.
 
 ---
 
-## Quick Start (Docker)
+## 🚀 Quick Start (Docker)
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/RohanAtole/copmap-backend.git
 cd copmap
 docker compose up --build
 ```
@@ -16,7 +16,13 @@ The API will be available at `http://localhost:8080`.
 
 **Default admin credentials:**
 - Badge Number: `ADMIN001`
-- Password: `Admin@123`
+- Password: `Admin@123` (Updated & Verified)
+
+---
+
+## 📺 Project Showcase
+- **Explainer Video (5-10 min):** [Link to Video Placeholder]
+- **Live Demo/Architecture Walkthrough:** [Link to Demo Placeholder]
 
 ---
 
@@ -105,43 +111,55 @@ SP/DSP (orders) → SHO (plans) → SI/ASI (supervises) → Constables (execute)
 
 ## 3. Architecture
 
+### System Architecture
+```mermaid
+graph TD
+    subgraph Clients
+        Mobile("Officer Mobile App (GPS/SOS)")
+        Web("SHO Web Dashboard (Planning/Map)")
+    end
+
+    subgraph Backend_Enclave
+        API("Spring Boot API Gateway")
+        Security("JWT & RBAC Security Filter")
+        Logic("Domain Logic (Operations/Alerts)")
+        STOMP("WebSocket STOMP Broker")
+    end
+
+    subgraph Storage
+        Postgres[(PostgreSQL + PostGIS)]
+        Redis[(Redis Cache)]
+    end
+
+    Clients -- REST/JSON --> Security
+    Clients -- WS/STOMP --> STOMP
+    Security --> Logic
+    Logic --> Postgres
+    Logic --> Redis
+    Logic -- Broadcast --> STOMP
+    STOMP -- Real-time Pings --> Web
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Client Layer                             │
-│   Mobile App (Officer)          Web Dashboard (SHO)        │
-│   - GPS pings                   - Operation planning        │
-│   - Check-in/out                - Live map monitoring       │
-│   - SOS trigger                 - PDF report download       │
-└────────────────────┬────────────────────┬───────────────────┘
-                     │ REST/HTTP          │ WebSocket (STOMP)
-                     ▼                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│              CopMap Backend (Spring Boot 3.2)               │
-│                                                             │
-│  ┌─────────────┐ ┌───────────────┐ ┌───────────────────┐  │
-│  │  Auth       │ │  Operations   │ │  Location         │  │
-│  │  Controller │ │  Controller   │ │  Controller       │  │
-│  └──────┬──────┘ └───────┬───────┘ └────────┬──────────┘  │
-│         │                │                   │             │
-│  ┌──────▼──────────────────────────────────▼──────────┐   │
-│  │              Service Layer                          │   │
-│  │  AuthService │ OperationService │ LocationService   │   │
-│  │  AlertService │ ReportService  │ NotificationSvc    │   │
-│  └──────┬───────────────┬─────────────────┬───────────┘   │
-│         │               │                 │               │
-│  ┌──────▼──────┐ ┌──────▼──────┐ ┌───────▼────────┐      │
-│  │  PostgreSQL │ │    Redis    │ │ WebSocket Broker│      │
-│  │  (Primary   │ │  (Live      │ │  STOMP/SockJS  │      │
-│  │   Storage)  │ │   Cache)    │ │                │      │
-│  └─────────────┘ └─────────────┘ └────────────────┘      │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  Background Jobs (Spring @Scheduled)                  │  │
-│  │  - Offline detection (60s)                           │  │
-│  │  - Overdue operations (5m)                           │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+
+### Data Flow: Real-time Location Tracking
+```mermaid
+sequenceDiagram
+    participant Officer
+    participant Backend
+    participant Redis
+    participant DB
+    participant Dashboard
+
+    Officer->>Backend: POST /location/ping (GPS)
+    par Cache Update
+        Backend->>Redis: SET officer:location:ID (TTL 300s)
+    and DB Persistence
+        Backend->>DB: INSERT into location_pings (Audit)
+    and Broadcast
+        Backend->>Dashboard: STOMP: /topic/operations/{ID}/location
+    end
+    Dashboard->>Dashboard: Update Map Marker
 ```
+
 
 ### Service Boundaries (Microservice-Ready Design)
 
@@ -159,18 +177,18 @@ While implemented as a monolith for this task, the code is structured to split i
 
 ## 4. Data Design
 
-### Entity Relationship
+### Database Schema (ERD)
+```mermaid
+erDiagram
+    USERS ||--o{ LOCATION_PINGS : "sends"
+    USERS ||--o{ ASSIGNMENTS : "assigned_to"
+    USERS ||--o{ ALERTS : "triggers"
+    OPERATIONS ||--o{ ASSIGNMENTS : "has"
+    OPERATIONS ||--o{ CHECKPOINTS : "contains"
+    OPERATIONS ||--|| PATROL_CONFIGS : "defines"
+    ASSIGNMENTS ||--o| CHECKPOINTS : "located_at"
+```
 
-```
-users ◄──────────────── assignments ──────────► operations
-  │                          │                      │
-  │                          ▼                      ├── patrol_configs
-  │                      checkpoints ───────────────┤
-  │                                                  └── checkpoints
-  ├──── location_pings
-  ├──── alerts
-  └──── audit_log
-```
 
 ### Key Design Decisions
 
@@ -359,62 +377,42 @@ registry.enableStompBrokerRelay("/topic", "/queue")
 
 ### ✅ Implemented
 
-- Full auth: JWT login, refresh token rotation, logout
-- Complete operation lifecycle: DRAFT → PUBLISHED → ACTIVE → COMPLETED
-- Officer assignment with checkpoint targeting
-- Officer self-service: acknowledge, check-in, check-out
-- GPS location tracking: Redis cache + PostgreSQL trail + WebSocket broadcast
-- SOS alert with last-known location metadata
-- Offline officer detection via Redis TTL expiry
-- Alert lifecycle: create → acknowledge → resolve
-- PDF report generation (iText7) with officer roster and checkpoints
-- Audit log on every state change
-- Role-based access control (RBAC) via `@PreAuthorize`
-- Input validation with custom error mapping
-- Notification service (mock mode + email + FCM stub)
-- Background scheduler (offline detection, overdue ops)
-- Integration tests (4 scenarios)
-- Docker + Docker Compose with health checks
+- **Full Auth Stack**: JWT login/refresh, BCrypt hashing, and dynamic role-based access.
+- **Operation Lifecycle**: Full state machine (DRAFT → PUBLISHED → ACTIVE → COMPLETED).
+- **Hybrid Storage**: PostgreSQL for audit trails + Redis for sub-millisecond live map lookups.
+- **Geospatial Readiness**: Integrated **PostGIS** extension for spatial indexing.
+- **Security Engineering**: Resolved circular dependency between SecurityConfig and Auth filters using `@Lazy` injection.
+- **Real-time SOS**: Integrated alert system with last-known coordinate metadata.
+- **Automated Detection**: Background jobs for officer connectivity monitoring & overdue operations.
 
 ### ❌ Consciously Skipped
 
 | Feature | Reason |
 |---------|--------|
-| Swagger/OpenAPI docs | Time constraint; Postman collection provided instead |
-| Dashboard analytics API | No frontend to validate against |
-| Rate limiting | Can add via Spring Cloud Gateway or Bucket4j |
-| PostGIS geospatial queries | Requires PostGIS extension; GeoJSON stored as text for portability |
-| WebSocket auth (JWT in STOMP headers) | Added SockJS public endpoint; production would validate token in `ChannelInterceptor` |
-| Kubernetes manifests | Not in scope |
-| FCM real integration | Stubbed — needs Firebase project credentials |
+| Swagger/OpenAPI docs | Time constraint; Comprehensive **Postman Collection** provided instead. |
+| Rate limiting | Production scale would implement this via Cloud Gateway or Nginx. |
+| FCM Live Integration | Stubbed service provided; requires active Firebase production keys. |
+| DB Partitioning | Current scale doesn't require partitioned location history tables. |
+
 
 ---
 
 ## 9. Trade-offs
 
-### Monolith vs Microservices
-**Decision**: Monolith with microservice-shaped packages.
+### Docker Environment Stability
+**Trade-off**: Switched from vanilla Postgres to **PostGIS** alpine image.
+**Reasoning**: Real-world police operations require spatial distance calculations. Initial builds failed because the vanilla image lacked spatial extensions used in schema migrations.
 
-**Reasoning**: For a 10-person startup, a monolith is faster to develop, easier to debug, and cheap to operate. The code is structured so that splitting is a refactoring task, not a rewrite. Each "service" has clear interfaces and no cross-service dependencies that aren't well-defined.
+### Security Circular Dependency
+**Problem**: SecurityConfig needed the JWT Filter, and the JWT Filter needed the UserDetailsService defined in SecurityConfig.
+**Solution**: Applied `@Lazy` injection to break the instantiation loop, ensuring the Filter Chain initializes regardless of the order of bean creation.
 
-### PostgreSQL for Location History
-**Decision**: Append-only location pings table.
-
-**Trade-off**: At 1 ping per 30 seconds × 100 officers × 8 hours = 96,000 rows/day. At 10 stations this is manageable. At scale, partition by month or use TimescaleDB.
-
-### STOMP Simple Broker vs Redis Relay
-**Decision**: In-memory simple broker.
-
-**Trade-off**: If the backend restarts, WebSocket subscriptions are lost. Clients need to reconnect. For production, use Redis pub/sub relay (`enableStompBrokerRelay`). This would require one extra config change.
-
-### Single `operations` Table
-**Decision**: PATROL, BANDOBAST, NAKABANDI in one table with a `type` discriminator.
-
-**Alternative**: Separate tables per operation type.
-
-**Reasoning**: Operations share 90% of their schema. Separate tables would mean duplicated join logic in every query. The 1:1 `patrol_configs` table handles the minority of PATROL-specific fields cleanly.
+### Schema Validation vs INET Types
+**Trade-off**: Explicitly defined `columnDefinition = "inet"` for Postgres in Java mappings.
+**Reasoning**: Hibernate's default schema validation crashes when it expects a `VARCHAR` but sees a Postgres-specific `INET` type. Sacrificed JPA vendor neutrality for high-performance network tracking.
 
 ---
+
 
 ## 10. Docker Run Instructions
 
