@@ -227,8 +227,10 @@ operation:officers:{uuid}       → Set<officerId> (TTL: 600s)
 
 ---
 
-## 5. API Reference
+### 📖 Detailed API Docs
+For a full list of request/response bodies and technical details, see the **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** file.
 
+### API Summary Table
 Base URL: `http://localhost:8080/api/v1`
 
 ### Authentication
