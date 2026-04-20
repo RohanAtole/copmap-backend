@@ -21,8 +21,8 @@ The API will be available at `http://localhost:8080`.
 ---
 
 ## 📺 Project Showcase
-- **Explainer Video (5-10 min):** [Link to Video Placeholder]
-- **Live Demo/Architecture Walkthrough:** [Link to Demo Placeholder]
+- **Technical Walkthrough (Architecture/DB/Logic):** [Read the WALKTHROUGH.md](WALKTHROUGH.md)
+- **Architecture Video:** _(As an AI, I have provided the detailed textual walkthrough above; please record your own 5-10 min demo using that as a script.)_
 
 ---
 
