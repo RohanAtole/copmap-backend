@@ -1,0 +1,363 @@
+{
+  "info": {
+    "_postman_id": "copmap-backend-collection",
+    "name": "CopMap Backend API",
+    "description": "Police Operations Management System — CopMap Backend Screening Task",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "operationId", "value": "" },
+    { "key": "officerId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) {",
+                  "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+                  "  pm.test('Login successful', () => pm.expect(res.data.accessToken).to.not.be.empty);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeNumber\": \"ADMIN001\",\n  \"password\": \"Admin@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh?refreshToken={{refreshToken}}"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/auth/logout?refreshToken={{refreshToken}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create Station Officer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) pm.collectionVariables.set('stationOfficerId', res.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeNumber\": \"SHO001\",\n  \"fullName\": \"Rajesh Kumar\",\n  \"phone\": \"9876543210\",\n  \"email\": \"sho001@police.gov.in\",\n  \"password\": \"Officer@123\",\n  \"role\": \"STATION_OFFICER\",\n  \"rank\": \"Inspector\",\n  \"stationName\": \"Connaught Place PS\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Field Officer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) pm.collectionVariables.set('officerId', res.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeNumber\": \"HC001\",\n  \"fullName\": \"Suresh Yadav\",\n  \"phone\": \"9876543211\",\n  \"email\": \"hc001@police.gov.in\",\n  \"password\": \"Officer@123\",\n  \"role\": \"OFFICER\",\n  \"rank\": \"Head Constable\",\n  \"stationName\": \"Connaught Place PS\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Available Officers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/users/available?station=Connaught Place PS"
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/users?station=Connaught Place PS&page=0&size=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Operations — Patrol",
+      "item": [
+        {
+          "name": "1. Create Patrol Operation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) pm.collectionVariables.set('operationId', res.data.id);",
+                  "pm.test('Status is DRAFT', () => pm.expect(res.data.status).to.eql('DRAFT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"PATROL\",\n  \"title\": \"Night Patrol — Connaught Place\",\n  \"description\": \"Routine night patrol covering all lanes and inner circle.\",\n  \"plannedStart\": \"2026-04-20T20:00:00Z\",\n  \"plannedEnd\": \"2026-04-21T04:00:00Z\",\n  \"locationName\": \"Connaught Place Inner Circle\",\n  \"shiftType\": \"NIGHT\",\n  \"patrolConfig\": {\n    \"beatName\": \"Beat No. 12\",\n    \"expectedRounds\": 3,\n    \"roundInterval\": 90\n  },\n  \"checkpoints\": [\n    {\n      \"name\": \"Inner Circle Gate A\",\n      \"latitude\": 28.6315,\n      \"longitude\": 77.2167,\n      \"radiusMeters\": 50,\n      \"sequenceOrder\": 1\n    },\n    {\n      \"name\": \"Palika Bazar Entrance\",\n      \"latitude\": 28.6324,\n      \"longitude\": 77.2181,\n      \"radiusMeters\": 50,\n      \"sequenceOrder\": 2\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "2. Assign Officers to Patrol",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations/{{operationId}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"officers\": [\n    {\n      \"officerId\": \"{{officerId}}\",\n      \"dutyRole\": \"Beat Officer\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "3. Publish Patrol",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/operations/{{operationId}}/publish"
+          }
+        },
+        {
+          "name": "4. Start Patrol",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/operations/{{operationId}}/start"
+          }
+        },
+        {
+          "name": "5. Officer Acknowledges",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/operations/{{operationId}}/acknowledge"
+          }
+        },
+        {
+          "name": "6. Officer Check-In",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/operations/{{operationId}}/check-in"
+          }
+        },
+        {
+          "name": "7. Close Patrol",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations/{{operationId}}/close",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"closureNotes\": \"All beats covered. No major incidents. 2 suspicious persons questioned and released. GD entry made.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "8. Download PDF Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/operations/{{operationId}}/report.pdf"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Operations — Bandobast",
+      "item": [
+        {
+          "name": "Create Bandobast Operation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success) pm.collectionVariables.set('bandobastId', res.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"BANDOBAST\",\n  \"title\": \"Republic Day Bandobast 2026\",\n  \"description\": \"Full deployment for Republic Day parade security. VIP movement expected.\",\n  \"plannedStart\": \"2026-01-26T05:00:00Z\",\n  \"plannedEnd\": \"2026-01-26T14:00:00Z\",\n  \"locationName\": \"Kartavya Path, New Delhi\",\n  \"shiftType\": \"MORNING\",\n  \"areaGeoJson\": \"{\\\"type\\\":\\\"Polygon\\\",\\\"coordinates\\\":[]}\",\n  \"checkpoints\": [\n    {\n      \"name\": \"Gate 1 — VIP Entry\",\n      \"latitude\": 28.6129,\n      \"longitude\": 77.2295,\n      \"radiusMeters\": 100,\n      \"sequenceOrder\": 1,\n      \"notes\": \"Strict checking. Only authorized personnel.\"\n    },\n    {\n      \"name\": \"Naka Point — India Gate\",\n      \"latitude\": 28.6129,\n      \"longitude\": 77.2295,\n      \"radiusMeters\": 75,\n      \"sequenceOrder\": 2\n    },\n    {\n      \"name\": \"Crowd Control — South Stand\",\n      \"latitude\": 28.6121,\n      \"longitude\": 77.2280,\n      \"radiusMeters\": 50,\n      \"sequenceOrder\": 3\n    }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Operations — Nakabandi",
+      "item": [
+        {
+          "name": "Create Nakabandi",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"NAKABANDI\",\n  \"title\": \"NH-48 Drunk Driving Naka — Saturday Night\",\n  \"description\": \"Random breath test and document checking on NH-48.\",\n  \"plannedStart\": \"2026-04-20T22:00:00Z\",\n  \"plannedEnd\": \"2026-04-21T02:00:00Z\",\n  \"locationName\": \"NH-48, near Rajokri Flyover, Gurugram\",\n  \"shiftType\": \"NIGHT\",\n  \"checkpoints\": [\n    {\n      \"name\": \"Inbound Lane Naka\",\n      \"latitude\": 28.5110,\n      \"longitude\": 77.0780,\n      \"radiusMeters\": 30,\n      \"sequenceOrder\": 1\n    },\n    {\n      \"name\": \"Outbound Lane Naka\",\n      \"latitude\": 28.5112,\n      \"longitude\": 77.0784,\n      \"radiusMeters\": 30,\n      \"sequenceOrder\": 2\n    }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Location Tracking",
+      "item": [
+        {
+          "name": "Send GPS Ping",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/location/ping",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 28.6315,\n  \"longitude\": 77.2167,\n  \"accuracyMeters\": 8.5,\n  \"speedKmh\": 5.2,\n  \"headingDegrees\": 90.0,\n  \"batteryPercent\": 72,\n  \"operationId\": \"{{operationId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Live Map (Operation)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/location/operations/{{operationId}}/live"
+          }
+        },
+        {
+          "name": "Get Officer Location",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/location/officers/{{officerId}}"
+          }
+        },
+        {
+          "name": "Trigger SOS",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/location/sos?operationId={{operationId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "Get Alerts for Operation",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/alerts/operations/{{operationId}}?page=0&size=20"
+          }
+        },
+        {
+          "name": "Acknowledge Alert",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/alerts/{alertId}/acknowledge"
+          }
+        },
+        {
+          "name": "Resolve Alert",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/alerts/{alertId}/resolve"
+          }
+        }
+      ]
+    }
+  ]
+}

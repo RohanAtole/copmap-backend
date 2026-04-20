@@ -1,0 +1,102 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:15-3.4-alpine
+    container_name: copmap-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: copmap
+      POSTGRES_USER: copmap
+      POSTGRES_PASSWORD: copmap123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U copmap -d copmap"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - copmap-network
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: copmap-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - copmap-network
+
+  # ── CopMap Backend ────────────────────────────────────────────────────────
+  copmap-backend:
+    build:
+      context: ./copmap-backend
+      dockerfile: Dockerfile
+    container_name: copmap-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: copmap
+      DB_USER: copmap
+      DB_PASS: copmap123
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+
+      # JWT — CHANGE IN PRODUCTION
+      JWT_SECRET: "copmap-production-secret-key-must-be-at-least-256-bits-long"
+      JWT_EXPIRY_MS: 86400000
+      JWT_REFRESH_EXPIRY_MS: 604800000
+
+      # CORS — adjust for frontend origin
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:4200"
+
+      # Notifications (mock by default)
+      NOTIFICATION_MOCK: "true"
+
+      # Server
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - copmap-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  copmap-network:
+    driver: bridge

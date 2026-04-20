@@ -1,0 +1,51 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Spring Boot
+*.jar
+!.mvn/wrapper/*.jar
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables - NEVER COMMIT
+.env
+*.env.local
+
+# Docker volumes
+postgres_data/
+redis_data/
+
+# Temporary artifacts
+copmap_project.zip
+hash.js
+update_pass.sql
+hash.js
+node_modules/
+package-lock.json
+package.json
+TestHash.java
+TestBcrypt.java
+
